@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GabonNote</title>
+<style>
+  :root {
+    --vert: #0a7a4a;
+    --jaune: #e8b90b;
+    --bleu: #2b5fa8;
+    --bg: #f4f6f3;
+    --surface: #ffffff;
+    --surface2: #eef2ee;
+    --text: #17211b;
+    --muted: #5b6a61;
+    --line: #d9e0da;
+    --danger: #b3392f;
+    --ok: #0a7a4a;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --vert: #2fbf82; --jaune: #f0c52e; --bleu: #6e9fe0;
+      --bg: #101713; --surface: #18211b; --surface2: #1f2b23;
+      --text: #eef3ef; --muted: #9db0a4; --line: #2b3a31;
+      --danger: #e27b71; --ok: #2fbf82;
+    }
+  }
+  :root[data-theme="dark"] {
+    --vert: #2fbf82; --jaune: #f0c52e; --bleu: #6e9fe0;
+    --bg: #101713; --surface: #18211b; --surface2: #1f2b23;
+    --text: #eef3ef; --muted: #9db0a4; --line: #2b3a31;
+    --danger: #e27b71; --ok: #2fbf82;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; line-height: 1.45;
+  }
+  h1, h2, h3, button, label, input, select, .ui { font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif; }
+
+  /* Fond diaporama */
+  #fond { position: fixed; inset: 0; z-index: -2; background-size: cover; background-position: center; opacity: .16; transition: opacity .6s; }
+  #fond.cahier {
+    background-image: repeating-linear-gradient(0deg, transparent 0 31px, var(--line) 31px 32px);
+    opacity: .5;
+  }
+
+  /* Écran de chargement */
+  #splash {
+    position: fixed; inset: 0; z-index: 50; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    transition: opacity .6s;
+  }
+  #splash.fin { opacity: 0; pointer-events: none; }
+  #splash img, #splash svg { width: 96px; height: 96px; object-fit: contain; }
+  #splash .devise { font-size: 1.15rem; letter-spacing: .12em; color: var(--text); }
+  #splash .sous { font-size: .85rem; color: var(--muted); }
+  .barre { width: 160px; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .barre span { display: block; height: 100%; width: 0; background: var(--vert); animation: charge 1.8s ease-out forwards; }
+  @keyframes charge { to { width: 100%; } }
+
+  /* En-tête */
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 12px 18px; background: var(--surface); border-bottom: 1px solid var(--line);
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  }
+  .marque { display: flex; align-items: center; gap: 10px; }
+  .marque img, .marque svg { width: 34px; height: 34px; object-fit: contain; }
+  .marque h1 { font-size: 1.15rem; }
+  .marque small { display: block; font-size: .68rem; color: var(--muted); letter-spacing: .06em; }
+  .ruban { height: 4px; background: linear-gradient(90deg, var(--vert) 0 33.3%, var(--jaune) 33.3% 66.6%, var(--bleu) 66.6%); }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--line); color: var(--text);
+    padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: .85rem;
+  }
+  .btn-ghost:hover { border-color: var(--vert); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--bleu); outline-offset: 2px; }
+
+  main { max-width: 760px; margin: 0 auto; padding: 22px 16px 10px; }
+  .ecran { display: none; }
+  .ecran.actif { display: block; }
+
+  /* Formulaires */
+  .carte { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+  .auth { max-width: 420px; margin: 18px auto; }
+  .auth h2 { margin-bottom: 4px; font-size: 1.4rem; }
+  .auth p.aide { color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+  label { display: block; margin: 14px 0 5px; font-size: .85rem; color: var(--muted); }
+  input, select {
+    width: 100%; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-size: 1rem;
+  }
+  .btn {
+    width: 100%; margin-top: 18px; padding: 12px; border: 0; border-radius: 8px;
+    background: var(--vert); color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .lien { text-align: center; margin-top: 14px; font-size: .88rem; color: var(--muted); }
+  .lien a { color: var(--bleu); cursor: pointer; text-decoration: underline; }
+  .erreur { color: var(--danger); font-size: .85rem; margin-top: 10px; min-height: 1.2em; }
+  .photo { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+  .photo img, .avatar {
+    width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--surface2);
+    border: 2px solid var(--jaune); flex: none; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--vert); font-family: "Trebuchet MS", sans-serif;
+  }
+  .photo input { border: 0; padding: 0; background: transparent; font-size: .85rem; }
+
+  /* Tableau de bord */
+  .bandeau {
+    display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px;
+  }
+  .profil { display: flex; align-items: center; gap: 12px; }
+  .profil .avatar { width: 50px; height: 50px; }
+  .profil strong { display: block; font-family: "Trebuchet MS", sans-serif; }
+  .profil span { font-size: .8rem; color: var(--muted); }
+  .general { text-align: right; }
+  .general .n { font-family: "Trebuchet MS", sans-serif; font-size: 2.3rem; font-weight: 700; line-height: 1; }
+  .general .n.ok { color: var(--ok); }
+  .general .n.bas { color: var(--danger); }
+  .general .l { font-size: .78rem; color: var(--muted); }
+  .trimestres { display: flex; gap: 6px; margin-bottom: 14px; }
+  .trimestres button {
+    flex: 1; padding: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    border-radius: 8px; cursor: pointer; font-size: .9rem;
+  }
+  .trimestres button.on { background: var(--vert); color: #fff; border-color: var(--vert); }
+  .ajout { display: flex; gap: 8px; margin-bottom: 14px; }
+  .ajout input:first-child { flex: 1; }
+  .ajout input.coef { width: 78px; }
+  .ajout button { padding: 0 16px; border: 0; border-radius: 8px; background: var(--jaune); color: #1a1a1a; font-weight: 700; cursor: pointer; }
+  .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 620px) { .grille { grid-template-columns: 1fr; } }
+  .matiere { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--vert); border-radius: 10px; padding: 14px; }
+  .matiere.bas { border-left-color: var(--danger); }
+  .matiere header { all: unset; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .matiere h3 { font-size: 1.02rem; }
+  .matiere .moy { font-family: "Trebuchet MS", sans-serif; font-weight: 700; font-size: 1.1rem; }
+  .matiere .meta { font-size: .75rem; color: var(--muted); margin-bottom: 8px; }
+  .devoir { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .devoir button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 0 4px; }
+  .devoir button:hover { color: var(--danger); }
+  .vide { color: var(--muted); font-size: .85rem; padding: 6px 0; }
+  .mini { display: flex; gap: 6px; margin-top: 10px; }
+  .mini input { padding: 8px; font-size: .9rem; min-width: 0; }
+  .mini button { padding: 0 12px; border: 0; border-radius: 8px; background: var(--bleu); color: #fff; cursor: pointer; font-weight: 700; }
+  .retirer { margin-top: 8px; background: none; border: 0; color: var(--muted); font-size: .75rem; cursor: pointer; text-decoration: underline; }
+
+  footer { text-align: center; padding: 26px 16px 30px; color: var(--muted); font-size: .8rem; }
+  footer .devise-pied { letter-spacing: .1em; margin-bottom: 4px; }
+  @media (prefers-reduced-motion: reduce) { .barre span { animation-duration: .01s; } #splash { transition: none; } }
+</style>
+</head>
+<body>
+
+<div id="fond" class="cahier"></div>
+
+<!-- Chargement -->
+<div id="splash">
+  <div id="splash-blason"></div>
+  <div class="devise">UNION · TRAVAIL · JUSTICE</div>
+  <div class="barre"><span></span></div>
+  <div class="sous">République gabonaise</div>
+</div>
+
+<div class="ruban"></div>
+<header>
+  <div class="marque">
+    <span id="header-blason"></span>
+    <div><h1>GabonNote</h1><small>Calcul de moyennes</small></div>
+  </div>
+  <button class="btn-ghost" id="btn-sortir" style="display:none" onclick="deconnexion()">Déconnexion</button>
+</header>
+
+<main>
+  <!-- Connexion -->
+  <section id="ecran-connexion" class="ecran">
+    <div class="carte auth">
+      <h2>Connexion</h2>
+      <p class="aide">Retrouve tes notes et tes moyennes.</p>
+      <label for="c-mail">Adresse e-mail</label>
+      <input id="c-mail" type="email" autocomplete="email">
+      <label for="c-mdp">Mot de passe</label>
+      <input id="c-mdp" type="password" autocomplete="current-password">
+      <div class="erreur" id="c-err"></div>
+      <button class="btn" onclick="connexion()">Se connecter</button>
+      <div class="lien">Pas de compte ? <a onclick="aller('inscription')">Créer un compte</a></div>
+    </div>
+  </section>
+
+  <!-- Inscription -->
+  <section id="ecran-inscription" class="ecran">
+    <div class="carte auth">
+      <h2>Créer un compte</h2>
+      <p class="aide">Ton compte reste enregistré sur cet appareil.</p>
+      <div class="photo">
+        <img id="i-photo" alt="" style="display:none">
+        <div class="avatar" id="i-initiale">?</div>
+        <input id="i-fichier" type="file" accept="image/*" onchange="choisirPhoto(this)">
+      </div>
+      <label for="i-nom">Nom complet</label>
+      <input id="i-nom" type="text" autocomplete="name">
+      <label for="i-mail">Adresse e-mail</label>
+      <input id="i-mail" type="email" autocomplete="email">
+      <label for="i-mdp">Mot de passe (6 caractères minimum)</label>
+      <input id="i-mdp" type="password" autocomplete="new-password">
+      <div class="erreur" id="i-err"></div>
+      <button class="btn" onclick="inscription()">Créer mon compte</button>
+      <div class="lien">Déjà inscrit ? <a onclick="aller('connexion')">Se connecter</a></div>
+    </div>
+  </section>
+
+  <!-- Application -->
+  <section id="ecran-app" class="ecran">
+    <div class="bandeau">
+      <div class="profil">
+        <img id="p-photo" class="avatar" alt="" style="display:none">
+        <div class="avatar" id="p-initiale"></div>
+        <div><strong id="p-nom"></strong><span id="p-trim"></span></div>
+      </div>
+      <div class="general">
+        <div class="n" id="g-moy">--</div>
+        <div class="l">Moyenne générale du trimestre</div>
+      </div>
+    </div>
+
+    <div class="trimestres" id="trimestres"></div>
+
+    <div class="ajout">
+      <input id="m-nom" type="text" placeholder="Nouvelle matière (ex. Mathématiques)">
+      <input id="m-coef" class="coef" type="number" min="1" step="1" value="1" aria-label="Coefficient de la matière">
+      <button onclick="ajouterMatiere()">Ajouter</button>
+    </div>
+
+    <div class="grille" id="grille"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="devise-pied">UNION · TRAVAIL · JUSTICE</div>
+  <div>Conçu par Damien Starly Koumba</div>
+</footer>
+
+<script>
+/* ---------- Réglages ----------
+   Pour le déploiement GitHub : place tes photos dans un dossier "images/"
+   et liste-les ici. Elles défileront chaque seconde en arrière-plan.
+   Place aussi le blason officiel dans "blason.png" à côté de ce fichier. */
+const IMAGES_FOND = [
+  // "images/lycee1.jpg",
+  // "images/eleves-tenue.jpg",
+  // "images/cahiers.jpg",
+];
+const FICHIER_BLASON = "blason.png";
+
+/* ---------- Blason (repli si blason.png absent) ---------- */
+const SVG_BLASON = `<svg viewBox="0 0 100 100" role="img" aria-label="Blason"><path d="M50 6 L90 20 V52 C90 74 72 88 50 96 C28 88 10 74 10 52 V20 Z" fill="none" stroke="currentColor" stroke-width="4"/><path d="M50 6 L90 20 V36 H10 V20 Z" fill="#0a7a4a"/><rect x="10" y="36" width="80" height="14" fill="#e8b90b"/><path d="M10 50 H90 V52 C90 74 72 88 50 96 C28 88 10 74 10 52 Z" fill="#2b5fa8"/></svg>`;
+function blason(cible){
+  const img = new Image();
+  img.alt = "Blason de la République gabonaise";
+  img.onload = () => { cible.innerHTML = ""; cible.appendChild(img); };
+  cible.innerHTML = SVG_BLASON;
+  img.src = FICHIER_BLASON;
+}
+blason(document.getElementById("splash-blason"));
+blason(document.getElementById("header-blason"));
+setTimeout(() => {
+  const s = document.getElementById("splash");
+  s.classList.add("fin");
+  setTimeout(() => s.remove(), 700);
+}, 2000);
+
+/* ---------- Diaporama de fond ---------- */
+if (IMAGES_FOND.length) {
+  const fond = document.getElementById("fond");
+  fond.classList.remove("cahier");
+  let k = 0;
+  const change = () => { fond.style.backgroundImage = `url('${IMAGES_FOND[k]}')`; k = (k + 1) % IMAGES_FOND.length; };
+  change(); setInterval(change, 1000);
+}
+
+/* ---------- Utilitaires ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function lire(cle, def){ try { return JSON.parse(localStorage.getItem(cle)) ?? def; } catch(e){ return def; } }
+function ecrire(cle, val){ try { localStorage.setItem(cle, JSON.stringify(val)); } catch(e){ alert("Stockage plein ou indisponible dans ce navigateur."); } }
+async function hash(txt){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+const users = () => lire("gn_users", {});
+const sauver = u => ecrire("gn_users", u);
+let courant = null, trimestre = 1, photoData = "";
+
+function aller(nom){
+  document.querySelectorAll(".ecran").forEach(e => e.classList.remove("actif"));
+  $("ecran-" + nom).classList.add("actif");
+  $("btn-sortir").style.display = nom === "app" ? "" : "none";
+}
+
+/* ---------- Photo de profil ---------- */
+function choisirPhoto(input){
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const im = new Image();
+    im.onload = () => {
+      const t = 160, c = document.createElement("canvas"); c.width = c.height = t;
+      const m = Math.min(im.width, im.height);
+      c.getContext("2d").drawImage(im, (im.width-m)/2, (im.height-m)/2, m, m, 0, 0, t, t);
+      photoData = c.toDataURL("image/jpeg", .8);
+      $("i-photo").src = photoData; $("i-photo").style.display = ""; $("i-initiale").style.display = "none";
+    };
+    im.src = e.target.result;
+  };
+  r.readAsDataURL(f);
+}
+
+/* ---------- Comptes ---------- */
+async function inscription(){
+  const nom = $("i-nom").value.trim(), mail = $("i-mail").value.trim().toLowerCase(), mdp = $("i-mdp").value;
+  const err = $("i-err"); err.textContent = "";
+  if (!nom || !mail || !mdp) { err.textContent = "Remplis tous les champs."; return; }
+  if (!/^\S+@\S+\.\S+$/.test(mail)) { err.textContent = "Adresse e-mail invalide."; return; }
+  if (mdp.length < 6) { err.textContent = "Le mot de passe doit contenir au moins 6 caractères."; return; }
+  const u = users();
+  if (u[mail]) { err.textContent = "Un compte existe déjà avec cet e-mail."; return; }
+  u[mail] = { nom, mdp: await hash(mdp), photo: photoData, trimestres: {1:{},2:{},3:{}} };
+  sauver(u); localStorage.setItem("gn_session", mail);
+  ouvrir(mail);
+}
+async function connexion(){
+  const mail = $("c-mail").value.trim().toLowerCase(), mdp = $("c-mdp").value;
+  const u = users()[mail], err = $("c-err"); err.textContent = "";
+  if (!u || u.mdp !== await hash(mdp)) { err.textContent = "E-mail ou mot de passe incorrect."; return; }
+  localStorage.setItem("gn_session", mail);
+  ouvrir(mail);
+}
+function deconnexion(){ localStorage.removeItem("gn_session"); courant = null; aller("connexion"); }
+
+/* ---------- Application ---------- */
+function ouvrir(mail){
+  courant = mail; photoData = "";
+  const u = users()[mail];
+  $("p-nom").textContent = u.nom;
+  $("p-initiale").textContent = u.nom.charAt(0).toUpperCase();
+  if (u.photo) { $("p-photo").src = u.photo; $("p-photo").style.display = ""; $("p-initiale").style.display = "none"; }
+  else { $("p-photo").style.display = "none"; $("p-initiale").style.display = ""; }
+  aller("app"); dessiner();
+}
+function donnees(){ const u = users(); return [u, u[courant].trimestres[trimestre]]; }
+
+function moyMatiere(m){
+  if (!m.devoirs.length) return null;
+  const c = m.devoirs.reduce((s,d) => s + d.coef, 0);
+  return m.devoirs.reduce((s,d) => s + d.note * d.coef, 0) / c;
+}
+const fmt = n => n.toFixed(2).replace(".", ",");
+
+function dessiner(){
+  $("trimestres").innerHTML = [1,2,3].map(t =>
+    `<button class="${t===trimestre?"on":""}" onclick="trimestre=${t};dessiner()">Trimestre ${t}</button>`).join("");
+  $("p-trim").textContent = "Trimestre " + trimestre;
+  const [, mats] = donnees();
+  const ids = Object.keys(mats);
+  let somme = 0, poids = 0;
+  $("grille").innerHTML = ids.length ? ids.map(id => {
+    const m = mats[id], moy = moyMatiere(m);
+    if (moy !== null) { somme += moy * m.coef; poids += m.coef; }
+    const bas = moy !== null && moy < 10;
+    return `<div class="matiere ${bas?"bas":""}">
+      <header><h3>${esc(m.nom)}</h3><span class="moy">${moy===null?"--":fmt(moy)+"/20"}</span></header>
+      <div class="meta">Coefficient ${m.coef}</div>
+      ${m.devoirs.length ? m.devoirs.map((d,i) =>
+        `<div class="devoir"><span>Devoir ${i+1} · coef ${d.coef}</span><span>${fmt(d.note)}/20 <button aria-label="Supprimer ce devoir" onclick="supprimerDevoir('${id}',${i})">×</button></span></div>`).join("")
+        : `<div class="vide">Aucun devoir. Ajoute ta première note.</div>`}
+      <div class="mini">
+        <input id="n-${id}" type="number" min="0" max="20" step="0.25" placeholder="Note /20" aria-label="Note">
+        <input id="k-${id}" type="number" min="1" step="1" value="1" placeholder="Coef" aria-label="Coefficient du devoir" style="max-width:70px">
+        <button onclick="ajouterDevoir('${id}')">+</button>
+      </div>
+      <button class="retirer" onclick="retirerMatiere('${id}')">Retirer la matière</button>
+    </div>`;
+  }).join("") : `<div class="vide carte" style="grid-column:1/-1">Ajoute ta première matière pour commencer.</div>`;
+  const g = $("g-moy");
+  if (poids) { const v = somme / poids; g.textContent = fmt(v); g.className = "n " + (v >= 10 ? "ok" : "bas"); }
+  else { g.textContent = "--"; g.className = "n"; }
+}
+
+function ajouterMatiere(){
+  const nom = $("m-nom").value.trim(), coef = parseFloat($("m-coef").value) || 1;
+  if (!nom) return;
+  const [u, mats] = donnees();
+  mats["m" + Date.now()] = { nom, coef, devoirs: [] };
+  sauver(u); $("m-nom").value = ""; $("m-coef").value = 1; dessiner();
+}
+function ajouterDevoir(id){
+  const note = parseFloat($("n-"+id).value), coef = parseFloat($("k-"+id).value) || 1;
+  if (isNaN(note) || note < 0 || note > 20) { alert("Entre une note entre 0 et 20."); return; }
+  const [u, mats] = donnees();
+  mats[id].devoirs.push({ note, coef }); sauver(u); dessiner();
+}
+function supprimerDevoir(id, i){ const [u, mats] = donnees(); mats[id].devoirs.splice(i,1); sauver(u); dessiner(); }
+function retirerMatiere(id){
+  if (!confirm("Retirer cette matière et ses notes ?")) return;
+  const [u, mats] = donnees(); delete mats[id]; sauver(u); dessiner();
+}
+
+/* ---------- Démarrage ---------- */
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const a = document.querySelector(".ecran.actif");
+  if (a && a.id === "ecran-connexion") connexion();
+  else if (a && a.id === "ecran-inscription") inscription();
+});
+const sess = localStorage.getItem("gn_session");
+if (sess && users()[sess]) ouvrir(sess); else aller("connexion");
+</script>
+</body>
+</html>
